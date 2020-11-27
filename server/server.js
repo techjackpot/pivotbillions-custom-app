@@ -9,13 +9,15 @@ import Router from "koa-router";
 import session from "koa-session";
 import * as handlers from "./handlers/index";
 dotenv.config();
+import webhooksRouter from "./routes/webhooks";
+import scriptsRouter from "./routes/scripts";
 const port = parseInt(process.env.PORT, 10) || 8081;
 const dev = process.env.NODE_ENV !== "production";
 const app = next({
   dev,
 });
 const handle = app.getRequestHandler();
-const { SHOPIFY_API_SECRET, SHOPIFY_API_KEY, SCOPES } = process.env;
+const { SHOPIFY_API_SECRET, SHOPIFY_API_KEY, SCOPES, HOST } = process.env;
 app.prepare().then(() => {
   const server = new Koa();
   const router = new Router();
@@ -44,6 +46,15 @@ app.prepare().then(() => {
           secure: true,
           sameSite: "none",
         });
+        
+        await handlers.registerWebhooks(shop, accessToken, "CUSTOMERS_CREATE", `/webhooks/customers/create`, ApiVersion.October19);
+        
+        server.context.client = await handlers.createClient(shop, accessToken);
+
+        await handlers.createScriptTag(ctx, {
+          src: `${HOST}/scripts/load-tracking`
+        });
+
         ctx.redirect("/");
       },
     })
@@ -53,6 +64,7 @@ app.prepare().then(() => {
       version: ApiVersion.October19,
     })
   );
+  server.use(scriptsRouter.routes());
   router.get("(.*)", verifyRequest(), async (ctx) => {
     await handle(ctx.req, ctx.res);
     ctx.respond = false;
@@ -60,6 +72,7 @@ app.prepare().then(() => {
   });
   server.use(router.allowedMethods());
   server.use(router.routes());
+  server.use(webhooksRouter.routes());
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
   });
