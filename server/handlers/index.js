@@ -1,9 +1,15 @@
 import { createClient } from "./client";
-import { getOneTimeUrl } from "./mutations/get-one-time-url";
-import { getSubscriptionUrl } from "./mutations/get-subscription-url";
-import { updateCustomer } from "./mutations/update-customer";
-import { getCustomer } from "./mutations/get-customer";
+import { updateMetafield } from "./mutations/update-metafield";
 import { createScriptTag } from "./mutations/create-script-tag";
+import { getShop } from "./mutations/get-shop";
+import { registerShop } from "./register-shop";
 import { registerWebhooks } from "./register-webhooks";
 
-export { createClient, getOneTimeUrl, getSubscriptionUrl, registerWebhooks, updateCustomer, createScriptTag, getCustomer };
+export {
+  createClient,
+  updateMetafield,
+  createScriptTag,
+  getShop,
+  registerShop,
+  registerWebhooks,
+};

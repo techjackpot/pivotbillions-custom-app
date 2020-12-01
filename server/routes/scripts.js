@@ -7,25 +7,23 @@ const router = new Router({ prefix: '/scripts' });
 router.get('/load-tracking', async (ctx) => {
   ctx.type = 'application/javascript; charset=utf-8';
   ctx.body = `
-    ;(function({cid}) {
-      if (!cid) return;
+    ;(function() {
       var script = document.createElement('script');
-      script.src = '${process.env.HOST}/scripts/tracking-script?cid=' + cid;
+      script.src = '${process.env.HOST}/scripts/tracking-script';
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
-    })(__st);
+    })();
   `;
 });
 
 router.get('/tracking-script', async (ctx) => {
-  const {cid: customerID} = ctx.query;
-  const customerData = await handlers.getCustomer(ctx, customerID);
+  const shopData = await handlers.getShop(ctx);
   const aqtagData = {};
-  customerData.metafields.edges.forEach(({node}) => {
+  shopData.privateMetafields.edges.forEach(({node}) => {
     aqtagData[node.key] = node.value;
   });
-  console.log('--- loading tracking script', customerID, aqtagData);
+  console.log('--- loading tracking script', aqtagData);
   ctx.type = 'application/javascript; charset=utf-8';
   ctx.body = `
     var aqObject = aqObject || {

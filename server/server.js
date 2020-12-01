@@ -9,7 +9,6 @@ import Router from "koa-router";
 import session from "koa-session";
 import * as handlers from "./handlers/index";
 dotenv.config();
-import webhooksRouter from "./routes/webhooks";
 import scriptsRouter from "./routes/scripts";
 const port = parseInt(process.env.PORT, 10) || 8081;
 const dev = process.env.NODE_ENV !== "production";
@@ -47,13 +46,17 @@ app.prepare().then(() => {
           secure: true,
           sameSite: "none",
         });
-        
-        await handlers.registerWebhooks(shop, accessToken, "CUSTOMERS_CREATE", `/webhooks/customers/create`, ApiVersion.October19);
+        ctx.cookies.set("accessToken", accessToken, {
+          httpOnly: false,
+          secure: true,
+          sameSite: "none",
+        });
         
         server.context.client = await handlers.createClient(shop, accessToken);
 
-        await handlers.createScriptTag(ctx, {
-          src: `${HOST}/scripts/load-tracking`
+        await handlers.registerShop(ctx, {
+          shop,
+          accessToken,
         });
 
         ctx.redirect("/");
@@ -65,6 +68,15 @@ app.prepare().then(() => {
       version: ApiVersion.October19,
     })
   );
+  server.use(async (ctx, next) => {
+    const shop = ctx.cookies.get('shopOrigin');
+    const accessToken = ctx.cookies.get('accessToken');
+    if (shop && accessToken && !ctx.client) {
+      server.context.client = await handlers.createClient(shop, accessToken);
+      console.log('graphql client is created');
+    }
+    await next();
+  });
   server.use(scriptsRouter.routes());
   router.get("(.*)", verifyRequest(), async (ctx) => {
     await handle(ctx.req, ctx.res);
@@ -73,7 +85,6 @@ app.prepare().then(() => {
   });
   server.use(router.allowedMethods());
   server.use(router.routes());
-  server.use(webhooksRouter.routes());
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
   });
